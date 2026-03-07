@@ -18,25 +18,25 @@ Matrix   ──┘
 
 ### Discord
 
-1. Join the Imagineering Discord server: **[invite link]**
+1. Join the Imagineering Discord server: **https://discord.gg/ccSsd6G8**
 2. Find the **#imagineering** channel
 3. Start chatting — that's it
 
 ### Telegram
 
-1. Open this invite link: **[invite link]**
+1. Open this invite link: **https://t.me/+k-6h9pBzz200ZDJl**
 2. Join the "Imagineering with Claude Code" group
 3. Start chatting
 
 ### WhatsApp
 
-1. Open this invite link: **[invite link]**
+1. Open this invite link: **https://chat.whatsapp.com/H14OTB48bjPEF0IQzSd5tC**
 2. Join the group
 3. Start chatting
 
 ### Signal
 
-1. Open this invite link: **[invite link]**
+1. Open this invite link: **https://signal.group/#CjQKICjnZ-2w-4rfqXPvRsVAiALpP4FRQ8QNjnEKVlC2VGHMEhBD6-xKm6vTBxox_sosyIwO**
 2. Join the group
 3. Start chatting
 
@@ -82,4 +82,4 @@ Each platform only shows messages from when you joined. There's no shared histor
 Nick, on infrastructure at `imagineering.cc`. The bridges are open source ([mautrix](https://github.com/mautrix)) and the homeserver is [Continuwuity](https://continuwuity.org).
 
 **Something's broken — who do I tell?**
-Message Nick on whichever platform you're on, or open an issue on the [GitHub repo](https://github.com/imagineering/matrix).
+Message Nick on whichever platform you're on, or open an issue on the [GitHub repo](https://github.com/imagineering-cc/matrix-chat-superbridge).
