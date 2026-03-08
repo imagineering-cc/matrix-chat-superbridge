@@ -288,6 +288,9 @@ class RelayHandler:
                 # accept the reaction (they ignore relay puppet reactions).
                 # Hub room: use puppet intent for correct identity display.
                 if target_room in self._portal_rooms and self._double_puppet_map:
+                    # Use the first double-puppeted user as the reaction proxy.
+                    # Currently assumes a single entry in the map — if multiple
+                    # users are added, consider a RELAY_REACTION_PROXY_USER env var.
                     proxy_user = next(iter(self._double_puppet_map))
                     intent = self._appservice.intent.user(proxy_user)
                 else:
