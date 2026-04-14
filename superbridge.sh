@@ -253,7 +253,7 @@ plumb_discord() {
   echo
   echo "  Step A — Find the Discord channel ID:"
   echo "    In Discord, enable Developer Mode (Settings > App Settings > Advanced)"
-  echo "    Right-click the #imagineering-with-claude-code channel > Copy Channel ID"
+  echo "    Right-click the #imagineering channel > Copy Channel ID"
   echo
   echo "  Step B — Bridge the channel into this room:"
   echo "    !discord bridge <channel-id>"

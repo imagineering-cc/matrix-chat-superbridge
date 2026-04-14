@@ -18,7 +18,7 @@ Matrix   ──┘
 
 ### Discord
 
-1. Join the Imagineering Discord server: **https://discord.gg/ccSsd6G8**
+1. Join the Imagineering Discord server: **https://discord.gg/AdEw7SsY5**
 2. Find the **#imagineering** channel
 3. Start chatting — that's it
 
