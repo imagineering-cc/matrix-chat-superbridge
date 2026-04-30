@@ -6,8 +6,7 @@ Continuwuity is a Rust-based Matrix homeserver, community fork of conduwuit (arc
 
 ## Target Deployment
 
-Oracle OCI (4 CPU, 24 GB RAM) — migrated from GCP e2-medium (`34.40.229.206`) for more resources.
-Previously: Raspberry Pi 4 → GCP e2-medium → OCI.
+Oracle OCI (4 CPU, 24 GB RAM).
 
 ## Requirements
 
@@ -97,16 +96,6 @@ The `rm -f` is required before `volume rm` — Docker won't remove a volume stil
 Managed in `imagineering-infra/caddy/Caddyfile`. Caddy runs as a Docker container on the OCI instance.
 
 Caddy provides automatic HTTPS via Let's Encrypt. Federation is enabled and uses `.well-known` delegation on `imagineering.cc` to route to `matrix.imagineering.cc:443`.
-
-### Previous GCP deployment
-
-GCP instance (`34.40.229.206`) is retained as fallback. To restore:
-
-```bash
-ssh nick@34.40.229.206 "cd ~/apps/matrix && docker compose up -d"
-```
-
-Update DNS back to `34.40.229.206` if needed.
 
 ## Bridges
 
