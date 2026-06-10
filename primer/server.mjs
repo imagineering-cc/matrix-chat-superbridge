@@ -22,6 +22,23 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, "..");
 const PORT = process.env.PRIMER_PORT || 7777;
 
+/**
+ * Find an env var: process env first, then primer/.env, then the sibling
+ * embodied-dreamfinder repo's .env (same machine, same OpenAI account) so the
+ * voice ractor works without duplicating keys.
+ */
+function loadEnvKey(name) {
+  if (process.env[name]) return process.env[name];
+  for (const p of [join(__dirname, ".env"), join(REPO_ROOT, "..", "embodied-dreamfinder", ".env")]) {
+    try {
+      const m = readFileSync(p, "utf8").match(new RegExp(`^${name}=(.*)$`, "m"));
+      if (m) return m[1].trim().replace(/^["']|["']$/g, "");
+    } catch { /* file absent — keep looking */ }
+  }
+  return "";
+}
+const OPENAI_API_KEY = loadEnvKey("OPENAI_API_KEY");
+
 // Read-only tools: the Primer may search the repo and the web, never edit.
 const ALLOWED_TOOLS = "Read,Grep,Glob,WebSearch,WebFetch";
 
@@ -126,10 +143,30 @@ const server = http.createServer(async (req, res) => {
     res.end(type === "application/json" ? JSON.stringify(obj) : obj);
   };
   try {
-    if (req.method === "GET" && (req.url === "/" || req.url === "/index.html"))
-      return send(200, readFileSync(join(__dirname, "index.html")), "text/html");
+    // Static files — explicit whitelist, no path traversal possible.
+    const STATIC = {
+      "/": ["index.html", "text/html"],
+      "/index.html": ["index.html", "text/html"],
+      "/mic-worklet.js": ["mic-worklet.js", "text/javascript"],
+    };
+    if (req.method === "GET" && STATIC[req.url]) {
+      const [file, type] = STATIC[req.url];
+      return send(200, readFileSync(join(__dirname, file)), type);
+    }
     if (req.method === "GET" && req.url === "/api/health")
-      return send(200, { ok: true });
+      return send(200, { ok: true, voice: Boolean(OPENAI_API_KEY) });
+    // Ephemeral OpenAI Realtime client secret for the voice ractor.
+    // Same flow as embodied-dreamfinder: browser never sees the real key.
+    if (req.method === "GET" && req.url === "/api/token") {
+      if (!OPENAI_API_KEY)
+        return send(503, { error: "OPENAI_API_KEY not configured — voice ractor unavailable" });
+      const r = await fetch("https://api.openai.com/v1/realtime/client_secrets", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
+        body: "{}",
+      });
+      return send(r.status, await r.json());
+    }
     if (req.method === "POST" && req.url === "/api/ask")
       return send(200, await handleAsk(await readBody(req)));
     if (req.method === "POST" && req.url === "/api/chapter")
