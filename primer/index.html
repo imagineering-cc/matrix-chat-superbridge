@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Bridgekeeper's Primer</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --panel: #181b24;
+    --panel2: #1f2330;
+    --text: #d8dce8;
+    --dim: #8b91a5;
+    --gold: #e8b84b;
+    --matrix: #0dbd8b;
+    --discord: #5865f2;
+    --telegram: #29a9eb;
+    --whatsapp: #25d366;
+    --signal: #3a76f0;
+    --error: #f25f5c;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Avenir Next", "Segoe UI", system-ui, sans-serif;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  header {
+    padding: 14px 22px;
+    background: var(--panel);
+    border-bottom: 1px solid #2a2f3e;
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  header h1 { font-size: 1.05rem; color: var(--gold); letter-spacing: 0.04em; }
+  header .subtitle { font-size: 0.78rem; color: var(--dim); font-style: italic; }
+  #badges { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; }
+  .badge-chip {
+    font-size: 0.68rem;
+    padding: 3px 9px;
+    border-radius: 999px;
+    border: 1px solid var(--gold);
+    color: var(--gold);
+    opacity: 0;
+    transform: scale(0.6);
+    transition: all 0.5s cubic-bezier(0.2, 1.6, 0.4, 1);
+  }
+  .badge-chip.earned { opacity: 1; transform: scale(1); }
+
+  #room-bar {
+    padding: 8px 22px;
+    background: var(--panel2);
+    font-size: 0.78rem;
+    color: var(--dim);
+    border-bottom: 1px solid #2a2f3e;
+    display: flex;
+    align-items: center;
+  }
+  #room-bar b { color: var(--text); }
+  #ractor-light { margin-left: auto; font-size: 0.7rem; }
+  #ractor-light.live { color: var(--matrix); }
+  #ractor-light.off { color: var(--dim); }
+
+  #chat {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 22px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    scroll-behavior: smooth;
+  }
+  .chapter-rule {
+    text-align: center;
+    color: var(--gold);
+    font-size: 0.78rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    margin: 18px 0 8px;
+    opacity: 0.9;
+  }
+  .chapter-rule::before, .chapter-rule::after { content: " ─── "; color: #3a4054; }
+
+  .msg {
+    max-width: 720px;
+    padding: 9px 14px;
+    border-radius: var(--radius);
+    background: var(--panel);
+    border-left: 3px solid var(--dim);
+    animation: pop 0.25s ease-out;
+    line-height: 1.5;
+    font-size: 0.9rem;
+  }
+  @keyframes pop { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .msg .sender { font-weight: 600; font-size: 0.78rem; margin-bottom: 2px; display: flex; gap: 8px; align-items: baseline; }
+  .msg .tag { font-size: 0.62rem; padding: 1px 7px; border-radius: 999px; color: #fff; opacity: 0.85; }
+  .msg code { background: #0b0d12; padding: 1px 6px; border-radius: 5px; font-size: 0.82rem; color: #9fe8c8; }
+
+  .p-primer   { border-color: var(--gold); }     .p-primer .sender   { color: var(--gold); }
+  .p-matrix   { border-color: var(--matrix); }   .p-matrix .sender   { color: var(--matrix); }
+  .p-discord  { border-color: var(--discord); }  .p-discord .sender  { color: #8b97ff; }
+  .p-telegram { border-color: var(--telegram); } .p-telegram .sender { color: var(--telegram); }
+  .p-whatsapp { border-color: var(--whatsapp); } .p-whatsapp .sender { color: var(--whatsapp); }
+  .p-signal   { border-color: var(--signal); }   .p-signal .sender   { color: #7da4ff; }
+  .p-error    { border-color: var(--error); background: #241418; } .p-error .sender { color: var(--error); }
+  .p-you      { border-color: #c0c6da; align-self: flex-end; background: #232a3d; } .p-you .sender { color: #c0c6da; }
+
+  .t-primer   { background: #8a6a1d; }
+  .t-matrix   { background: #0a8f6a; }
+  .t-discord  { background: var(--discord); }
+  .t-telegram { background: #1d83b8; }
+  .t-whatsapp { background: #1a9c4b; }
+  .t-signal   { background: #2f5fc4; }
+  .t-error    { background: #a33; }
+  .t-you      { background: #4a5168; }
+
+  .thinking { font-style: italic; color: var(--dim); }
+  .thinking::after { content: "…"; animation: dots 1.4s steps(4) infinite; }
+  @keyframes dots { 0% { content: ""; } 25% { content: "."; } 50% { content: ".."; } 75% { content: "..."; } }
+
+  #controls {
+    padding: 14px 22px 18px;
+    background: var(--panel);
+    border-top: 1px solid #2a2f3e;
+    min-height: 86px;
+  }
+  .choices { display: flex; flex-direction: column; gap: 8px; max-width: 760px; }
+  .choices .prompt { font-size: 0.85rem; color: var(--gold); margin-bottom: 2px; }
+  button.opt, button.go {
+    text-align: left;
+    background: var(--panel2);
+    color: var(--text);
+    border: 1px solid #323950;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 0.88rem;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    font-family: inherit;
+  }
+  button.opt:hover { border-color: var(--gold); background: #242a3c; }
+  button.opt.picked-wrong { border-color: var(--error); animation: shake 0.3s; }
+  button.opt.selected { border-color: var(--matrix); background: #1b2e2a; }
+  @keyframes shake { 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+  button.go {
+    text-align: center;
+    border-color: var(--gold);
+    color: var(--gold);
+    font-weight: 600;
+    align-self: flex-start;
+    padding: 9px 26px;
+  }
+  button.go:hover { background: #2c2616; }
+  button:disabled { opacity: 0.5; cursor: default; }
+
+  .inputrow { display: flex; gap: 8px; max-width: 760px; align-items: center; }
+  .inputrow input, .inputrow textarea {
+    flex: 1;
+    background: #0b0d12;
+    border: 1px solid #323950;
+    color: #cfe8da;
+    font-family: "SF Mono", "Fira Code", Menlo, monospace;
+    font-size: 0.88rem;
+    padding: 11px 14px;
+    border-radius: 10px;
+    outline: none;
+  }
+  .inputrow input:focus { border-color: var(--matrix); }
+  .hintbtn { background: none; border: none; color: var(--dim); cursor: pointer; font-size: 0.78rem; text-decoration: underline dotted; font-family: inherit; }
+  .hintbtn:hover { color: var(--gold); }
+
+  /* Ask-the-Primer dock — present whenever the ractor is live */
+  #ask-dock {
+    display: none;
+    position: fixed;
+    right: 18px;
+    bottom: 104px;
+    z-index: 5;
+  }
+  #ask-toggle {
+    background: var(--panel2);
+    border: 1px solid var(--gold);
+    color: var(--gold);
+    border-radius: 999px;
+    padding: 9px 16px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    font-family: inherit;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.45);
+  }
+  #ask-toggle:hover { background: #2c2616; }
+  #ask-panel {
+    display: none;
+    position: absolute;
+    right: 0;
+    bottom: 46px;
+    width: min(420px, 90vw);
+    background: var(--panel);
+    border: 1px solid #3a4054;
+    border-radius: var(--radius);
+    padding: 14px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.55);
+  }
+  #ask-panel .label { font-size: 0.78rem; color: var(--gold); margin-bottom: 8px; }
+  #ask-panel textarea {
+    width: 100%;
+    height: 64px;
+    resize: vertical;
+    background: #0b0d12;
+    border: 1px solid #323950;
+    border-radius: 8px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.85rem;
+    padding: 9px 11px;
+    outline: none;
+  }
+  #ask-panel textarea:focus { border-color: var(--gold); }
+  #ask-panel .row { display: flex; justify-content: flex-end; margin-top: 8px; }
+
+  .fanout { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+  .fanout .dest {
+    font-size: 0.72rem;
+    padding: 4px 10px;
+    border-radius: 999px;
+    color: #fff;
+    opacity: 0;
+    transform: translateY(6px);
+    animation: pop 0.4s ease-out forwards;
+  }
+
+  #victory {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(10, 12, 18, 0.92);
+    z-index: 10;
+    align-items: center; justify-content: center;
+    flex-direction: column; gap: 18px;
+    text-align: center; padding: 30px;
+  }
+  #victory h2 { color: var(--gold); font-size: 1.6rem; letter-spacing: 0.06em; }
+  #victory .scroll {
+    background: var(--panel);
+    border: 1px solid #3a4054;
+    border-radius: var(--radius);
+    padding: 22px 28px;
+    max-width: 640px;
+    max-height: 55vh;
+    overflow-y: auto;
+    text-align: left;
+    font-size: 0.85rem;
+    line-height: 1.7;
+  }
+  #victory .scroll h3 { color: var(--matrix); font-size: 0.9rem; margin: 12px 0 4px; }
+  #victory .scroll code { background: #0b0d12; padding: 1px 6px; border-radius: 5px; color: #9fe8c8; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⛩ The Bridgekeeper's Primer</h1>
+  <span class="subtitle">A Young Imagineer's Illustrated Guide to the Superbridge</span>
+  <div id="badges"></div>
+</header>
+<div id="room-bar">
+  📍 <b id="room-name">#admins:imagineering.cc</b> <span id="room-desc"></span>
+  <span id="ractor-light" class="off">○ ractor offline — static lessons only</span>
+</div>
+<div id="chat"></div>
+<div id="controls"></div>
+
+<div id="ask-dock">
+  <div id="ask-panel">
+    <div class="label">🪶 Ask the Primer anything — it will search this repo and the web before answering.</div>
+    <textarea id="ask-text" placeholder="e.g. why can't the relay just edit the portal room's name?"></textarea>
+    <div class="row"><button class="go" id="ask-send">Ask</button></div>
+  </div>
+  <button id="ask-toggle">🪶 Ask the Primer</button>
+</div>
+
+<div id="victory">
+  <h2>🏅 Bridgekeeper</h2>
+  <div class="scroll" id="fieldnotes"></div>
+  <button class="go" onclick="location.reload()">Play again</button>
+</div>
+
+<script>
+"use strict";
+/* ============================================================
+   The Bridgekeeper's Primer — a chat-shaped teaching game about
+   Matrix bridges: plumbing vs portals, the megabridge wall, the
+   Telegram receiver-lock, the relay appservice, and loop prevention.
+
+   Two layers:
+   1. A scripted arc (Chapters I-VI) — every puzzle is a real gotcha
+      from the imagineering.cc superbridge's history.
+   2. A live "ractor" (server.mjs → headless Claude Code) that answers
+      free questions mid-game and WRITES NEW CHAPTERS after the arc,
+      adapted to the learner's mistakes — researching the repo and the
+      mautrix docs as it goes. Without the server the game still runs;
+      the adaptive layer simply stays dark.
+   ============================================================ */
+
+// ---- learner model: everything the ractor adapts to ----------------
+const learner = {
+  mistakes: [],   // {chapter, prompt, picked, why}
+  hints: 0,
+  questions: [],  // free-text questions asked mid-game
+  completed: [],  // chapter titles finished
+};
+let currentChapter = "Prologue";
+
+// ---- script-builder helpers ----------------------------------------
+let S = [];  // the script: a MUTABLE sequence of steps (generated chapters splice in)
+const chapter = (title) => S.push({ t: "chapter", title });
+const room    = (name, desc) => S.push({ t: "room", name, desc });
+const say     = (platform, sender, text, ms = 850) => S.push({ t: "msg", platform, sender, text, ms });
+const primer  = (text, ms = 1100) => say("primer", "The Primer", text, ms);
+const choice  = (prompt, options) => S.push({ t: "choice", prompt, options });
+const multi   = (prompt, options, applyLabel) => S.push({ t: "multi", prompt, options, applyLabel });
+const input   = (prompt, pattern, hint, placeholder) => S.push({ t: "input", prompt, pattern, hint, placeholder });
+const badge   = (name) => S.push({ t: "badge", name });
+const fanout  = () => S.push({ t: "fanout" });
+const gate    = () => S.push({ t: "gate" });    // offer ractor-written chapters
+const finale  = () => S.push({ t: "finale" });
+
+/* ================= CHAPTER 1 — THE HUB ========================= */
+chapter("Chapter I · The Hub");
+room("#admins:imagineering.cc", "— the homeserver admin room");
+primer("Welcome, Bridgekeeper. Five communities chatter in five walled gardens: <b>Discord</b>, <b>Telegram</b>, <b>WhatsApp</b>, <b>Signal</b>, and <b>Matrix</b> itself. Your task: one room to bind them.");
+primer("First, a question of <i>sovereignty</i>. Every bridged chat needs a Matrix room to mirror it. The question that decides everything else is: <b>who owns that room?</b>");
+choice("Where should the hub room come from?", [
+  { label: "Let the WhatsApp bridge create it for me — it does that automatically.",
+    ok: false,
+    fb: "That room would be a <b>portal</b> — created, owned, and state-enforced by the bridge. You'd be a guest in its house, and it won't let four other bridges move in on your terms." },
+  { label: "Create the room myself, then invite the bridges in as guests.",
+    ok: true,
+    fb: "Exactly. A room <i>you</i> own, with bridges attached to it, is called <b>plumbing</b>. You set the name, the rules, the guest list. Remember this word — the whole game turns on it." },
+]);
+say("matrix", "@nick", "<code>./superbridge.sh create-room</code>");
+say("matrix", "System", "Room created: <code>!hub:imagineering.cc</code> · alias <code>#superbridge</code>");
+room("#superbridge:imagineering.cc", "— your hub room");
+primer("Your hall stands. Two house rules before the guests arrive.");
+choice("Should the hub room be end-to-end encrypted?", [
+  { label: "Yes — encrypt everything, always.",
+    ok: false,
+    fb: "Noble instinct, wrong room. The bridge bots must <i>read</i> every message to relay it. E2EE would hand them ciphertext they can't decrypt — the hub would fall silent. Bridged rooms stay unencrypted; the bridges themselves are the trust boundary." },
+  { label: "No — leave it unencrypted so the bridges can read and relay.",
+    ok: true,
+    fb: "Right. The room is unencrypted by design (and <code>m.federate: false</code> keeps it local to your homeserver). The bridges are middlemen; middlemen must see the letters they carry." },
+]);
+choice("The four bridge bots arrive at the door. What power level do you grant them?", [
+  { label: "PL 0 — they're just bots.",
+    ok: false,
+    fb: "Too low. Bridges write <b>state events</b> into the room to record their plumbing, and <code>state_default</code> is 50. At PL 0 they can talk but never attach anything." },
+  { label: "PL 50 — enough to write state, not enough to rule.",
+    ok: true,
+    fb: "The traditional grant. PL 50 clears <code>state_default</code> so bots can manage plumbing and ghost users, while you alone hold 100." },
+  { label: "PL 100 — full admin, keep it simple.",
+    ok: false,
+    fb: "Now four robots can demote <i>you</i>. Least privilege, Bridgekeeper: 50 is all the power a bridge needs." },
+]);
+say("matrix", "System", "Invited: <code>@discordbot</code> <code>@telegrambot</code> <code>@whatsappbot</code> <code>@signalbot</code> — all at PL 50");
+badge("Room Sovereign");
+
+/* ================= CHAPTER 2 — PLUMBING DISCORD ================= */
+chapter("Chapter II · Plumbing, First Class");
+primer("The Discord bridge is the elder of the four — a standalone Go bridge from before the great rewrite. It still speaks fluent <b>plumbing</b>: it will attach a Discord channel to a room you already own.");
+primer("In Discord, you enable <i>Developer Mode</i>, right-click the channel, and copy its ID: <code>9001</code>. Now speak the plumbing command <b>here in the hub</b> — the bridge bot is listening. (Format: <code>!discord bridge &lt;channel-id&gt;</code>)");
+input("Type the command to plumb Discord channel 9001 into this room:",
+  /^!discord\s+bridge\s+9001$/i,
+  "It starts with <code>!discord bridge</code> — then the channel ID you copied: 9001.",
+  "!discord bridge 9001");
+say("discord", "Discord bridge", "Channel <b>#imagineering</b> bridged to this room. ⚓");
+say("discord", "Maxwell 🦊", "hello from Discord! can everyone see this?");
+primer("Messages flow in! But watch what happens when a Matrix user replies…");
+say("matrix", "@nick", "loud and clear!");
+say("error", "Discord side", "In Discord, that arrived as <b>matrix-bridge-bot</b>: “nick: loud and clear!” — a robot reading mail aloud. The humans deserve faces.");
+primer("The fix: <b>relay webhooks</b>. One more command teaches the bridge to post into Discord with each sender's own name and avatar.");
+input("Type the command to enable webhook relay:",
+  /^!discord\s+set-relay$/i,
+  "Same bot, command is <code>set-relay</code>.",
+  "!discord set-relay");
+say("discord", "Discord bridge", "Relay webhook configured. Matrix users now appear in Discord with their own names and avatars. ✨");
+badge("Plumber, First Class");
+
+/* ============ CHAPTER 3 — THE TELEGRAM TRAP ===================== */
+chapter("Chapter III · The Telegram Trap");
+primer("Telegram next. The command looks the same — <code>!tg bridge</code> — but beware: this bridge was quietly <b>rewritten</b> onto the new shared framework, <i>bridgev2</i>, the one they call the <b>megabridge</b>.");
+primer("Megabridge portals are <b>split</b>: every bridged chat is <i>owned by the login it was bridged through</i> — the <b>receiver</b>. And only the receiver's login may serve as the relay for users who aren't logged in. Choose your receiver as carefully as a king chooses an heir.");
+choice("How do you bridge the Telegram group?", [
+  { label: "Bridge it now with my personal Telegram login — I'll sort out a bot later.",
+    ok: false,
+    fb: "🪤 <b>The trap closes.</b> The portal is now received by <i>you</i>, personally. When you later try <code>!tg set-relay</code> with a bot, the bridge refuses — only the receiver's login can relay. Worse: <code>!tg unset-relay</code> panics with a nil-pointer crash (a real mautrix v0.27.0 bug — though the panic does clear the relay as a side effect, which is its own kind of dark comedy). Back up and choose again." },
+  { label: "Log in a dedicated bot account first, then bridge with the bot as receiver.",
+    ok: true,
+    fb: "Wisdom. <code>login bot</code> with a BotFather token, make the bot an <b>admin in the Telegram group</b>, and bridge through it — the bot becomes the receiver, and relay rights follow the bot forever after." },
+]);
+say("telegram", "Telegram bridge", "Logged in as bot <b>ImagineeringRelayBot</b> (tgid <code>7654321</code>)");
+primer("Now plumb it. In bridgev2 the command names the receiver: <code>!tg bridge &lt;bot_tgid&gt; &lt;chat_id&gt;</code>. The bot's tgid is <code>7654321</code>; the supergroup's chat ID is <code>-1001234</code> (mind the minus — supergroups are negative numbers, like debts).");
+input("Type the bridgev2 plumbing command:",
+  /^!tg\s+bridge\s+7654321\s+-1001234$/i,
+  "<code>!tg bridge 7654321 -1001234</code> — bot tgid first, then the negative chat ID.",
+  "!tg bridge 7654321 -1001234");
+say("telegram", "Telegram bridge", "Group <b>Imagineering</b> bridged · receiver: ImagineeringRelayBot ⚓");
+input("One more — enable the relay so non-logged-in Matrix users reach Telegram:",
+  /^!tg\s+set-relay$/i,
+  "Mirror of the Discord step: <code>!tg set-relay</code>.",
+  "!tg set-relay");
+say("telegram", "Telegram bridge", "Relay enabled through the receiver's login. ✨");
+badge("Receiver of Portals");
+
+/* ============ CHAPTER 4 — THE MEGABRIDGE WALL =================== */
+chapter("Chapter IV · The Megabridge Wall");
+primer("Two to go. Confident now, you turn to WhatsApp and speak the old plumbing words…");
+say("matrix", "@nick", "<code>!wa open 6147xxxx@g.us</code>");
+say("error", "WhatsApp bridge", "Unknown command in this room. Creating portal room <b>“Imagineering (WA)”</b> elsewhere…");
+room("Imagineering (WA)", "— a portal room the bridge created and owns");
+say("whatsapp", "WhatsApp bridge", "This is the portal for your WhatsApp group. I own this room. I sync its name, avatar, and members from WhatsApp. It will mirror the group — and nothing else.");
+primer("There it is: <b>the megabridge wall</b>. WhatsApp and Signal run purely on the bridgev2 megabridge, and its shared core supports <i>only</i> the portal model. Plumbing wasn't broken — it was <b>designed out</b>. A bridge-owned room is a room the core can keep perfectly in sync, because nobody else may rearrange the furniture.");
+choice("The hub is here; the portal is there. What do you do?", [
+  { label: "Force it — edit the bridge's database so the portal points at the hub room.",
+    ok: false,
+    fb: "The core will fight you. It <i>enforces</i> that portal state mirrors the remote chat — your hub's name, members, and power levels would be 'corrected' out from under you. You cannot out-stubborn a sync loop." },
+  { label: "Abandon WhatsApp and Signal. Three platforms is plenty.",
+    ok: false,
+    fb: "Bridgekeeper. We do not leave communities behind." },
+  { label: "Accept the portal — and build a relay appservice that copies portal ↔ hub, speaking as each sender through puppet users.",
+    ok: true,
+    fb: "The artificer's answer — and the real one. If the megabridge insists on owning its rooms, let it. Your appservice sits in the portal, hears every message, and re-speaks it in the hub through a <b>puppet</b> (<code>@_relay_whatsapp_ab12:…</code>) wearing the sender's name and avatar. Plumbing, rebuilt one layer up." },
+]);
+primer("An appservice needs configuration: which rooms are spokes, and which is the hub.");
+choice("Which PORTAL_ROOMS value is well-formed?", [
+  { label: "PORTAL_ROOMS=whatsapp,signal",
+    ok: false,
+    fb: "Labels alone — but the appservice needs actual room IDs to join and listen." },
+  { label: "PORTAL_ROOMS=!wa-room:imagineering.cc=WhatsApp,!sig-room:imagineering.cc=Signal",
+    ok: true,
+    fb: "Correct: <code>!room_id:domain=Label</code>, comma-separated. Each portal gets a human label; <code>HUB_ROOM_ID</code> names the hall they all feed." },
+  { label: "PORTAL_ROOMS=#superbridge:imagineering.cc",
+    ok: false,
+    fb: "That's the hub's alias — the one room that must <i>not</i> be in the portal list, or you've built a snake eating its tail." },
+]);
+room("#admins:imagineering.cc", "— back in the admin room");
+primer("Last rite: the homeserver must be told this appservice exists and may puppet the <code>@_relay_*</code> namespace. On Continuwuity there is no config file to edit and no restart — you <i>register it live, in chat</i>, here in #admins, then paste the registration.yaml.");
+input("Type the admin command to register the appservice:",
+  /^!admin\s+appservices\s+register$/i,
+  "<code>!admin appservices register</code> — then you'd paste the YAML.",
+  "!admin appservices register");
+say("matrix", "Continuwuity", "Appservice <b>relay-bot</b> registered · namespace <code>@_relay_*</code> claimed · effective immediately, no restart.");
+badge("Appservice Artificer");
+
+/* ================ CHAPTER 5 — THE LOOP ========================== */
+chapter("Chapter V · The Loop");
+room("#superbridge:imagineering.cc", "— the hub, suddenly very noisy");
+primer("The relay awakens — and the room begins to <b>boil</b>.");
+say("whatsapp", "Alice", "hi everyone!", 500);
+say("matrix", "_relay_whatsapp_ab12 (puppet)", "hi everyone!", 420);
+say("whatsapp", "Alice", "hi everyone!", 340);
+say("matrix", "_relay_whatsapp_ab12 (puppet)", "hi everyone!", 280);
+say("error", "System", "⚠ Message volume rising… the relay is relaying its own relays. Each copy spawns a copy. This is the <b>echo storm</b> — the dragon every bridge-builder must slay exactly once.", 1200);
+multi("Which senders must the relay refuse to relay? (Select all that apply, then seal the wards.)", [
+  { label: "Its own puppet users — anyone matching @_relay_*", ok: true,
+    why: "Layer 1: never echo yourself. The puppets' messages ARE the relay's output." },
+  { label: "The bridge bots and their ghosts in portal rooms", ok: true,
+    why: "Layer 2: the megabridge already delivered those into the portal — relaying them back creates the cross-bridge loop." },
+  { label: "Messages already carrying a “Name: ” attribution prefix", ok: true,
+    why: "Layer 3: an attribution prefix means some other relay already spoke this message once. Re-relaying re-attributes — “Alice: Alice: Alice: hi”." },
+  { label: "All messages from Telegram users", ok: false,
+    why: "That's not loop prevention, that's censorship — Telegram folk are exactly who we're bridging FOR." },
+], "Seal the wards");
+say("matrix", "relay-bot", "Loop prevention armed: three layers. The storm dies. The room is quiet — the good kind of quiet. 🕯");
+badge("Loopbreaker");
+
+/* ================ CHAPTER 6 — FAN-OUT =========================== */
+chapter("Chapter VI · One Room, Five Worlds");
+primer("Everything stands: a hub you own, two bridges plumbed in directly, two megabridge portals relayed through puppets, and wards against the storm. One thing remains, Bridgekeeper: <b>say something</b>.");
+input("Send any message to the hub:",
+  /^.{1,200}$/,
+  "Anything at all. It's your room.",
+  "say hello to five worlds…");
+fanout();
+primer("It lands everywhere — and on each platform it wears <i>your</i> face, not a robot's. That is the whole craft: <b>plumbing where the bridges allow it, puppetry where they don't, and wards against your own echo.</b>");
+badge("Bridgekeeper");
+gate();    // the ractor offers to write Chapter VII+, adapted to this learner
+finale();
+
+/* ============================================================
+   ENGINE
+   ============================================================ */
+const chatEl = document.getElementById("chat");
+const controlsEl = document.getElementById("controls");
+const badgesEl = document.getElementById("badges");
+const ALL_BADGES = ["Room Sovereign", "Plumber, First Class", "Receiver of Portals", "Appservice Artificer", "Loopbreaker", "Bridgekeeper"];
+ALL_BADGES.forEach(addBadgeChip);
+function addBadgeChip(b) {
+  const chip = document.createElement("span");
+  chip.className = "badge-chip";
+  chip.id = "badge-" + b.replace(/\W+/g, "-");
+  chip.textContent = "🏅 " + b;
+  badgesEl.appendChild(chip);
+  return chip;
+}
+
+let i = 0;          // step pointer
+let lastSaid = "";  // captured fan-out message
+let ractor = false; // is the adaptive server alive?
+
+function el(html) { const d = document.createElement("div"); d.innerHTML = html; return d.firstElementChild; }
+function scroll() { chatEl.scrollTop = chatEl.scrollHeight; }
+function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+
+function addMsg(platform, sender, text, extraClass = "") {
+  const tag = { primer: "PRIMER", matrix: "MATRIX", discord: "DISCORD", telegram: "TELEGRAM",
+                whatsapp: "WHATSAPP", signal: "SIGNAL", error: "!", you: "YOU" }[platform] || platform;
+  const node = el(
+    `<div class="msg p-${platform} ${extraClass}">
+       <div class="sender">${sender} <span class="tag t-${platform}">${tag}</span></div>
+       <div class="body">${text}</div>
+     </div>`);
+  chatEl.appendChild(node);
+  scroll();
+  return node;
+}
+
+function next() { i++; run(); }
+
+/** Splice ractor-generated steps into the live script just after the pointer. */
+function injectSteps(rawSteps) {
+  const cleaned = rawSteps.map(s => {
+    if (s.t === "input" && typeof s.pattern === "string") {
+      try { s.pattern = new RegExp(s.pattern, "i"); }
+      catch { s.pattern = /^.{1,200}$/; }  // forgiving fallback if the regex is malformed
+    }
+    return s;
+  }).filter(s => ["chapter", "room", "msg", "choice", "multi", "input", "badge"].includes(s.t));
+  S.splice(i + 1, 0, ...cleaned);
+}
+
+function recordMistake(prompt, picked, why) {
+  learner.mistakes.push({ chapter: currentChapter, prompt, picked, why: why.replace(/<[^>]+>/g, "") });
+}
+
+function run() {
+  if (i >= S.length) return;
+  const s = S[i];
+  controlsEl.innerHTML = "";
+
+  switch (s.t) {
+    case "chapter":
+      currentChapter = s.title;
+      chatEl.appendChild(el(`<div class="chapter-rule">${s.title}</div>`));
+      scroll();
+      setTimeout(next, 700);
+      break;
+
+    case "room":
+      document.getElementById("room-name").textContent = s.name;
+      document.getElementById("room-desc").textContent = " " + (s.desc || "");
+      setTimeout(next, 300);
+      break;
+
+    case "msg":
+      addMsg(s.platform, s.sender, s.text);
+      setTimeout(next, s.ms || 850);
+      break;
+
+    case "choice": {
+      const box = el(`<div class="choices"><div class="prompt">⚖ ${s.prompt}</div></div>`);
+      s.options.forEach(o => {
+        const b = el(`<button class="opt">${esc(o.label)}</button>`);
+        b.onclick = () => {
+          if (o.ok) {
+            addMsg("primer", "The Primer", "✅ " + o.fb);
+            next();
+          } else {
+            b.classList.add("picked-wrong");
+            b.disabled = true;
+            recordMistake(s.prompt, o.label, o.fb);
+            addMsg("primer", "The Primer", "❌ " + o.fb);
+          }
+        };
+        box.appendChild(b);
+      });
+      controlsEl.appendChild(box);
+      break;
+    }
+
+    case "multi": {
+      const box = el(`<div class="choices"><div class="prompt">⚖ ${s.prompt}</div></div>`);
+      const state = new Map();
+      s.options.forEach(o => {
+        const b = el(`<button class="opt">${esc(o.label)}</button>`);
+        state.set(o, false);
+        b.onclick = () => { state.set(o, !state.get(o)); b.classList.toggle("selected"); };
+        box.appendChild(b);
+      });
+      const go = el(`<button class="go">${s.applyLabel || "Apply"}</button>`);
+      go.onclick = () => {
+        const wrongPick = s.options.find(o => state.get(o) && !o.ok);
+        const missing = s.options.find(o => !state.get(o) && o.ok);
+        if (wrongPick) { recordMistake(s.prompt, wrongPick.label, wrongPick.why); addMsg("primer", "The Primer", "❌ Not that one — " + wrongPick.why); return; }
+        if (missing)   { addMsg("primer", "The Primer", "🤔 The wards are incomplete. Something that should be ignored… isn't yet."); return; }
+        s.options.filter(o => o.ok).forEach(o => addMsg("primer", "The Primer", "🛡 " + o.why));
+        next();
+      };
+      box.appendChild(go);
+      controlsEl.appendChild(box);
+      break;
+    }
+
+    case "input": {
+      const box = el(`<div class="choices"><div class="prompt">⌨ ${s.prompt}</div></div>`);
+      const row = el(`<div class="inputrow"></div>`);
+      const inp = el(`<input type="text" placeholder="${esc(s.placeholder || "")}" autocomplete="off" spellcheck="false">`);
+      const hint = el(`<button class="hintbtn">hint?</button>`);
+      hint.onclick = () => { learner.hints++; addMsg("primer", "The Primer", "💡 " + s.hint); };
+      const submit = () => {
+        const v = inp.value.trim().replace(/\s+/g, " ");
+        if (s.pattern.test(v)) {
+          addMsg("you", "@nick", esc(v));
+          lastSaid = v;
+          next();
+        } else {
+          inp.style.borderColor = "var(--error)";
+          setTimeout(() => inp.style.borderColor = "", 400);
+          addMsg("primer", "The Primer", "That incantation fizzles. Try again — or ask for a <i>hint</i>.");
+        }
+      };
+      inp.addEventListener("keydown", e => { if (e.key === "Enter") submit(); });
+      const go = el(`<button class="go">Send</button>`);
+      go.onclick = submit;
+      row.appendChild(inp); row.appendChild(go); row.appendChild(hint);
+      box.appendChild(row);
+      controlsEl.appendChild(box);
+      inp.focus();
+      break;
+    }
+
+    case "badge": {
+      let chip = document.getElementById("badge-" + s.name.replace(/\W+/g, "-"));
+      if (!chip) chip = addBadgeChip(s.name);   // ractor-written chapters mint new badges
+      chip.classList.add("earned");
+      learner.completed.push(currentChapter);
+      addMsg("primer", "The Primer", `🏅 Badge earned: <b>${s.name}</b>`);
+      setTimeout(next, 900);
+      break;
+    }
+
+    case "fanout": {
+      const dests = [
+        ["discord", "Discord · as “nick” via webhook"],
+        ["telegram", "Telegram · via the bot receiver's relay"],
+        ["whatsapp", "WhatsApp · via puppet @_relay_*"],
+        ["signal", "Signal · via puppet @_relay_*"],
+      ];
+      const wrap = el(`<div class="msg p-you"><div class="sender">@nick <span class="tag t-matrix">HUB</span></div>
+        <div>${esc(lastSaid)}</div><div class="fanout"></div></div>`);
+      chatEl.appendChild(wrap);
+      const fan = wrap.querySelector(".fanout");
+      dests.forEach(([p, label], n) => {
+        fan.appendChild(el(`<span class="dest t-${p}" style="animation-delay:${0.4 + n * 0.45}s">→ ${label}</span>`));
+      });
+      scroll();
+      setTimeout(next, 2600);
+      break;
+    }
+
+    case "gate": {
+      if (!ractor) { next(); break; }   // no server: skip straight to the field notes
+      primerGate();
+      break;
+    }
+
+    case "finale": {
+      document.getElementById("fieldnotes").innerHTML = FIELD_NOTES;
+      document.getElementById("victory").style.display = "flex";
+      break;
+    }
+  }
+}
+
+/* ---- the ractor gate: ask Claude to write the next chapter ---------- */
+function primerGate() {
+  addMsg("primer", "The Primer",
+    "The scripted lessons end here — but <i>I</i> do not. I can write your next chapter myself: " +
+    "I will reread the relay's source, search the mautrix docs, and weave a lesson around " +
+    (learner.mistakes.length ? "the places where you stumbled." : "whatever calls to you next."));
+  const box = el(`<div class="choices">
+    <div class="prompt">📜 Shall the Primer write Chapter ${["VII","VIII","IX","X","XI","XII"][Math.min(learner.completed.length - 6, 5)] || "VII"}?</div>
+  </div>`);
+  const row = el(`<div class="inputrow"></div>`);
+  const inp = el(`<input type="text" placeholder="optional: a topic — e.g. double puppeting, reply threading, media relay…">`);
+  const go = el(`<button class="go">Write it</button>`);
+  const skip = el(`<button class="hintbtn">finish instead → field notes</button>`);
+  go.onclick = async () => {
+    const topic = inp.value.trim();
+    go.disabled = true; inp.disabled = true;
+    const thinking = addMsg("primer", "The Primer",
+      `<span class="thinking">Researching${topic ? " “" + esc(topic) + "”" : ""} — reading relay/appservice/, consulting docs.mau.fi</span>`);
+    try {
+      const r = await fetch("/api/chapter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ learner, completed: learner.completed, topic }),
+      });
+      const data = await r.json();
+      if (data.error) throw new Error(data.error);
+      thinking.querySelector(".body").innerHTML = "📜 The new chapter is written. Turn the page…";
+      injectSteps([...data.steps, { t: "gate" }]);   // re-offer after each generated chapter
+      next();
+    } catch (e) {
+      thinking.querySelector(".body").innerHTML =
+        "⚠ The ink ran dry (" + esc(e.message) + "). You may try again, or finish.";
+      go.disabled = false; inp.disabled = false;
+    }
+  };
+  skip.onclick = next;
+  row.appendChild(inp); row.appendChild(go);
+  box.appendChild(row); box.appendChild(skip);
+  controlsEl.appendChild(box);
+}
+
+/* ---- Ask-the-Primer dock (live whenever the server is up) ----------- */
+const dock = document.getElementById("ask-dock");
+const askPanel = document.getElementById("ask-panel");
+document.getElementById("ask-toggle").onclick = () =>
+  askPanel.style.display = askPanel.style.display === "block" ? "none" : "block";
+document.getElementById("ask-send").onclick = async () => {
+  const ta = document.getElementById("ask-text");
+  const q = ta.value.trim();
+  if (!q) return;
+  ta.value = "";
+  askPanel.style.display = "none";
+  learner.questions.push(q);
+  addMsg("you", "@nick", esc(q));
+  const thinking = addMsg("primer", "The Primer", `<span class="thinking">Searching the repo and the wider web</span>`);
+  try {
+    const r = await fetch("/api/ask", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question: q, chapter: currentChapter, learner }),
+    });
+    const data = await r.json();
+    if (data.error) throw new Error(data.error);
+    thinking.querySelector(".body").innerHTML = data.html;
+  } catch (e) {
+    thinking.querySelector(".body").innerHTML = "⚠ I could not reach my library: " + esc(e.message);
+  }
+  scroll();
+};
+
+/* ---- field notes ----------------------------------------------------- */
+const FIELD_NOTES = `
+  <h3>Field Notes — what you now know</h3>
+  <p><b>Plumbing</b>: attaching a remote chat to a Matrix room <i>you</i> created and own. The bridge is a guest.</p>
+  <p><b>Portal</b>: a room the bridge creates and owns, one per remote chat, state-synced by force.</p>
+  <p><b>Megabridge (bridgev2)</b>: mautrix's shared Go core. Portal-only by design — plumbing was designed out, not broken. WhatsApp, Signal, and (newly) Telegram run on it.</p>
+  <p><b>Split portals / receiver</b>: in bridgev2, a bridged chat belongs to the login it was bridged through, and only the receiver's login can relay. Log in the bot <i>first</i>.</p>
+  <p><b>Relay appservice</b>: the adapter when plumbing is forbidden — sits in portal rooms, re-speaks each message into the hub through per-sender puppets (<code>@_relay_*</code>).</p>
+  <p><b>Loop prevention, three layers</b>: ignore your own puppets · ignore bridge bots/ghosts · ignore already-attributed messages.</p>
+  <h3>The real incantations</h3>
+  <p><code>./superbridge.sh create-room</code> · <code>!discord bridge &lt;id&gt;</code> · <code>!discord set-relay</code><br>
+  <code>login bot</code> → <code>!tg bridge &lt;bot_tgid&gt; &lt;chat_id&gt;</code> → <code>!tg set-relay</code><br>
+  <code>!admin appservices register</code> (live, in #admins, no restart)<br>
+  <code>PORTAL_ROOMS=!room:domain=Label,…</code> + <code>HUB_ROOM_ID</code></p>
+  <p style="color:var(--dim); margin-top:10px"><i>Built from the true history of the imagineering.cc superbridge — including the trap, the wall, and the storm.</i></p>`;
+
+/* ---- boot: detect the ractor, then begin ----------------------------- */
+fetch("/api/health").then(r => r.json()).then(d => {
+  if (d.ok) {
+    ractor = true;
+    dock.style.display = "block";
+    const light = document.getElementById("ractor-light");
+    light.textContent = "● ractor live — the Primer can research & write new chapters";
+    light.className = "live";
+  }
+}).catch(() => {}).finally(run);
+</script>
+</body>
+</html>
