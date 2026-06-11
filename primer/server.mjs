@@ -148,6 +148,8 @@ const server = http.createServer(async (req, res) => {
       "/": ["index.html", "text/html"],
       "/index.html": ["index.html", "text/html"],
       "/mic-worklet.js": ["mic-worklet.js", "text/javascript"],
+      "/land": ["land.html", "text/html"],
+      "/land.html": ["land.html", "text/html"],
     };
     if (req.method === "GET" && STATIC[req.url]) {
       const [file, type] = STATIC[req.url];
