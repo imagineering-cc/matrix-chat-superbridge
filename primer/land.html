@@ -169,6 +169,67 @@ function lamp(pos, color = 0xffe0a0, intensity = 30, dist = 30) {
   scene.add(new THREE.Points(g, new THREE.PointsMaterial({ color: 0xb9a5f5, size: 1.1, sizeAttenuation: false, transparent: true, opacity: 0.8 })));
 }
 
+// ---------- nebula skybox ----------
+// A painted sky: vertical depth gradient + soft nebula blooms in the
+// palette of the five platforms. Backside sphere, drawn before everything.
+{
+  const cv = document.createElement("canvas");
+  cv.width = 1024; cv.height = 512;
+  const g = cv.getContext("2d");
+  const grad = g.createLinearGradient(0, 0, 0, 512);
+  grad.addColorStop(0, "#0c0e20");
+  grad.addColorStop(0.45, "#0a0c16");
+  grad.addColorStop(0.78, "#120a20");
+  grad.addColorStop(1, "#06070d");
+  g.fillStyle = grad; g.fillRect(0, 0, 1024, 512);
+  const blobs = [
+    [180, 150, 200, "rgba(106, 79, 196, 0.18)"],   // violet — the deep field
+    [330, 340, 160, "rgba(13, 189, 139, 0.10)"],   // matrix green
+    [700, 120, 230, "rgba(58, 118, 240, 0.14)"],   // signal blue
+    [870, 360, 180, "rgba(232, 184, 75, 0.08)"],   // gold dust
+    [520, 250, 280, "rgba(140, 90, 200, 0.09)"],   // wide violet wash
+    [80, 420, 150, "rgba(37, 211, 102, 0.06)"],    // whatsapp green, faint
+  ];
+  for (const [x, y, r, c] of blobs) {
+    const rg = g.createRadialGradient(x, y, 0, x, y, r);
+    rg.addColorStop(0, c); rg.addColorStop(1, "rgba(0,0,0,0)");
+    g.fillStyle = rg;
+    g.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(460, 32, 20),
+    new THREE.MeshBasicMaterial({ map: tex, side: THREE.BackSide, depthWrite: false }));
+  sky.renderOrder = -1;
+  scene.add(sky);
+}
+
+// ---------- particle trails ----------
+// Soft additive puffs left behind by envelopes (their stripe colour) and
+// ghosts (pale wisps). Shrink + fade, then disposed.
+const trailParticles = [];
+const softDot = (() => {
+  const cv = document.createElement("canvas");
+  cv.width = cv.height = 64;
+  const g = cv.getContext("2d");
+  const rg = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  rg.addColorStop(0, "rgba(255,255,255,1)");
+  rg.addColorStop(0.4, "rgba(255,255,255,0.5)");
+  rg.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = rg; g.fillRect(0, 0, 64, 64);
+  return new THREE.CanvasTexture(cv);
+})();
+function puff(pos, color, scale = 0.45, life = 0.65) {
+  const m = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: softDot, color, transparent: true, opacity: 0.85,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  }));
+  m.position.copy(pos);
+  m.scale.setScalar(scale);
+  scene.add(m);
+  trailParticles.push({ m, life, maxLife: life });
+}
+
 // ---------- planetoids (rooms) ----------
 // base/accent = high/low terrain tones · glow = atmosphere rim · flora = decoration set
 const PLANETS = {
@@ -446,7 +507,7 @@ function makeEnvelope(color) {
   return g;
 }
 function postEnvelope(color, path, speed = 7) {
-  envelopes.push({ m: makeEnvelope(color), path, t: 0, seg: 0, speed });
+  envelopes.push({ m: makeEnvelope(color), color, path, t: 0, seg: 0, speed, emit: 0 });
 }
 /** Mail rides a pipe INTO the hub: follow the curve wing→hub, then hop to the table.
     (Pipe curves are built hub→wing, so we walk them reversed.) */
@@ -734,6 +795,9 @@ function tick() {
     e.t += (e.speed * dt) / L;
     if (e.t >= 1) { e.t = 0; e.seg++; } else e.m.position.lerpVectors(a, b, e.t);
     e.m.rotation.y += dt * 2;
+    // comet trail in the envelope's platform colour
+    e.emit = (e.emit || 0) + dt;
+    if (e.emit > 0.06) { e.emit = 0; puff(e.m.position, e.color || 0xffffff); }
   }
 
   // ghosts through subspace
@@ -750,12 +814,29 @@ function tick() {
         gh.env.visible = false;
         const drop = makeEnvelope(gh.color);
         drop.position.copy(gh.g.position);
-        envelopes.push({ m: drop, path: [drop.position.clone(), hubTableTop()], t: 0, seg: 0, speed: 2.5 });
+        envelopes.push({ m: drop, color: gh.color, path: [drop.position.clone(), hubTableTop()], t: 0, seg: 0, speed: 2.5, emit: 0 });
       }
     } else {
       gh.g.position.lerpVectors(a, b, gh.t);
       gh.env.position.copy(gh.g.position).add(v(0, -0.15, 0.3));
+      // squash & stretch (the ghost breathes as it drifts) + face the way it's going
+      const wob = Math.sin(performance.now() / 140 + n * 1.7);
+      gh.g.scale.set(1 - wob * 0.05, 1 + wob * 0.09, 1 - wob * 0.05);
+      gh.g.lookAt(b);
+      gh.g.rotateY(Math.PI);   // eyes sit on +Z; lookAt points -Z at the target
+      // pale wisp trail
+      gh.emit = (gh.emit || 0) + dt;
+      if (gh.emit > 0.12) { gh.emit = 0; puff(gh.g.position, 0xbfc8e8, 0.6, 0.8); }
     }
+  }
+
+  // trail particles: fade + shrink, then dispose
+  for (let n = trailParticles.length - 1; n >= 0; n--) {
+    const p = trailParticles[n];
+    p.life -= dt;
+    if (p.life <= 0) { scene.remove(p.m); p.m.material.dispose(); trailParticles.splice(n, 1); continue; }
+    p.m.material.opacity = 0.85 * (p.life / p.maxLife);
+    p.m.scale.multiplyScalar(1 - dt * 1.1);
   }
 
   // echo storm: bounce inside a shell around the hub world
@@ -798,7 +879,7 @@ tick();
 // Debug/screenshot hook: lets headless verification reposition the view
 // (outside pointer lock the engine copies camera.position from player.pos
 // but leaves orientation alone, so a one-off lookAt sticks).
-window.__galaxy = { player, camera, PLANETS, v };
+window.__galaxy = { player, camera, scene, PLANETS, v };
 
 setTimeout(() => lore(
   "🌌 Welcome to <b>Mautrix Galaxy</b>. Every planetoid is a Matrix room — standing on one is membership. " +
