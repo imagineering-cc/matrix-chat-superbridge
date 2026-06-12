@@ -8,14 +8,7 @@ repo's history.
 Inspired by the Young Lady's Illustrated Primer (Diamond Age): a scripted arc
 with a live tutor — "the ractor" — behind it.
 
-## Play it
-
-The static build is published at **https://primer.imagineering.cc** (and the
-Mautrix Galaxy at https://primer.imagineering.cc/land). That's degraded mode —
-see below — because the adaptive ractor needs a local Claude Code login.
-Deployed via `imagineering-infra`: `./scripts/deploy-to.sh <ip> primer`.
-
-## Run it (full, with the live ractor)
+## Run it
 
 ```bash
 node primer/server.mjs
